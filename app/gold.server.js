@@ -22,14 +22,15 @@ export async function fetchGoldRates(settings = {}) {
 
   const data = await response.json();
   let ratePerOunceUSD = 0;
-
-  if (data && data.rates) {
-    // Metals.dev returns rate in USDXAU (price of 1 troy ounce in USD) or XAU (1 USD in troy ounces)
+  if (data && data.metals) {
+    ratePerOunceUSD = data.metals.gold;
+  } else if (data && data.rates) {
+    // Fallback if rates is provided instead of metals object
     ratePerOunceUSD = data.rates.USDXAU || (data.rates.XAU ? 1 / data.rates.XAU : 0);
   }
 
   if (!ratePerOunceUSD || isNaN(ratePerOunceUSD)) {
-    throw new Error("Invalid gold rate fetched from Metals.dev API.");
+    throw new Error(`Invalid gold rate fetched from Metals.dev API. Response keys: ${Object.keys(data || {})}`);
   }
 
   // Convert price per Ounce to price per Gram
