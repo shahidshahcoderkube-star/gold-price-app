@@ -32,3 +32,43 @@ model Session {
   refreshToken        String?
   refreshTokenExpires DateTime?
 }
+
+model GoldSettings {
+  id                  String   @id @default(uuid())
+  shop                String   @unique
+  apiKey              String
+  apiProvider         String   @default("goldapi")
+  makingChargeType    String   @default("percentage")
+  makingChargeValue   Float    @default(0.0)
+  profitMarginType    String   @default("percentage")
+  profitMarginValue   Float    @default(0.0)
+  minRate24K          Float    @default(0.0)
+  minRate22K          Float    @default(0.0)
+  minRate18K          Float    @default(0.0)
+  blockPriceDecreases Boolean  @default(false)
+  autoPushOnIncrease  Boolean  @default(true)
+  updateFrequency     String   @default("daily")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model GoldRateCache {
+  id        String   @id @default(uuid())
+  shop      String   @unique
+  rate24K   Float
+  rate22K   Float
+  rate18K   Float
+  updatedAt DateTime @updatedAt
+}
+
+model GoldActivityLog {
+  id                   String   @id @default(uuid())
+  shop                 String
+  timestamp            DateTime @default(now())
+  status               String
+  rate24K              Float
+  rate22K              Float
+  rate18K              Float
+  productsUpdatedCount Int      @default(0)
+  errorMessage         String?  @db.Text
+}
