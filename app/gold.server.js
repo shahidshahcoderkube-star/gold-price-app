@@ -4,59 +4,32 @@ import prisma from "./db.server";
 const OUNCE_TO_GRAM = 31.1034768;
 
 /**
- * Fetches the live gold price from the configured API provider and converts it to price per gram.
+ * Fetches the live gold price from Metals.dev and converts it to price per gram.
  * Returns an object with rate24K, rate22K, and rate18K per gram.
  */
-export async function fetchGoldRates(settings) {
-  const { apiKey, apiProvider } = settings;
+export async function fetchGoldRates(settings = {}) {
+  // Developer's global API Key for Metals.dev
+  const apiKey = "HGGUMKYGD3OXYMLYKTTM686LYKTTM";
 
-  if (!apiKey) {
-    throw new Error("API Key is missing in Gold settings.");
+  const response = await fetch(
+    `https://api.metals.dev/v1/latest?api_key=${apiKey}&currency=USD&unit=toz`
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Metals.dev API failed: ${response.statusText} - ${errorText}`);
   }
 
+  const data = await response.json();
   let ratePerOunceUSD = 0;
 
-  if (apiProvider === "goldapi") {
-    // GoldAPI.io request
-    const response = await fetch("https://www.goldapi.io/api/XAU/USD", {
-      headers: {
-        "x-access-token": apiKey,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`GoldAPI failed: ${response.statusText} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    ratePerOunceUSD = data.price; // GoldAPI returns USD per ounce directly
-  } else if (apiProvider === "metalpriceapi") {
-    // MetalPriceAPI request
-    const response = await fetch(
-      `https://api.metalpriceapi.com/v1/latest?api_key=${apiKey}&base=USD&currencies=XAU`
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`MetalPriceAPI failed: ${response.statusText} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    if (data.success && data.rates && data.rates.USDXAU) {
-      // Rates are represented as XAU per 1 USD (e.g., 0.00042)
-      // Therefore, USD per Ounce = 1 / rate
-      ratePerOunceUSD = 1 / data.rates.USDXAU;
-    } else {
-      throw new Error(`MetalPriceAPI invalid response: ${JSON.stringify(data)}`);
-    }
-  } else {
-    throw new Error(`Unsupported API provider: ${apiProvider}`);
+  if (data && data.rates) {
+    // Metals.dev returns rate in USDXAU (price of 1 troy ounce in USD) or XAU (1 USD in troy ounces)
+    ratePerOunceUSD = data.rates.USDXAU || (data.rates.XAU ? 1 / data.rates.XAU : 0);
   }
 
   if (!ratePerOunceUSD || isNaN(ratePerOunceUSD)) {
-    throw new Error("Invalid gold rate fetched from the API provider.");
+    throw new Error("Invalid gold rate fetched from Metals.dev API.");
   }
 
   // Convert price per Ounce to price per Gram

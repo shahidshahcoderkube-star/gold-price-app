@@ -17,13 +17,7 @@ export const loader = async ({ request }) => {
   const results = [];
 
   for (const settings of settingsList) {
-    const { shop, apiKey } = settings;
-
-    // Skip shops without API key configured
-    if (!apiKey) {
-      results.push({ shop, status: "SKIPPED", reason: "API key not configured." });
-      continue;
-    }
+    const { shop } = settings;
 
     try {
       // 3. Fetch gold prices and apply floor thresholds (Stop-Loss)

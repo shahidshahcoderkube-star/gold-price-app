@@ -80,8 +80,6 @@ export const action = async ({ request }) => {
   }
 
   if (intent === "save_settings") {
-    const apiKey = formData.get("apiKey") || "";
-    const apiProvider = formData.get("apiProvider") || "goldapi";
     const makingChargeType = formData.get("makingChargeType") || "percentage";
     const makingChargeValue = parseFloat(formData.get("makingChargeValue")) || 0;
     const profitMarginType = formData.get("profitMarginType") || "percentage";
@@ -96,8 +94,6 @@ export const action = async ({ request }) => {
     settings = await prisma.goldSettings.update({
       where: { shop },
       data: {
-        apiKey,
-        apiProvider,
         makingChargeType,
         makingChargeValue,
         profitMarginType,
@@ -116,10 +112,6 @@ export const action = async ({ request }) => {
 
   if (intent === "fetch_rates") {
     try {
-      if (!settings.apiKey) {
-        return Response.json({ error: "API Key is required to fetch live rates." }, { status: 400 });
-      }
-
       const liveRates = await fetchGoldRates(settings);
 
       const updatedCache = await prisma.goldRateCache.upsert({
@@ -154,10 +146,6 @@ export const action = async ({ request }) => {
     }
 
     try {
-      if (!settings.apiKey) {
-        throw new Error("API Key is required to perform pricing sync.");
-      }
-
       const liveRates = await fetchGoldRates(settings);
       const effectiveRates = getEffectiveRates(liveRates, settings);
 
@@ -545,7 +533,7 @@ export default function Index() {
                 className="btn btn-secondary"
                 style={{ padding: "4px 10px", fontSize: "12px" }}
                 onClick={handleFetchRates}
-                disabled={isSubmitting || !settings.apiKey}
+                disabled={isSubmitting}
               >
                 {isSubmitting ? "Updating..." : "Fetch Live Rates"}
               </button>
@@ -581,7 +569,7 @@ export default function Index() {
               </div>
             ) : (
               <div style={{ textAlign: "center", padding: "20px", color: "#6d7175" }}>
-                No rates cached yet. Please configure your API key and click "Fetch Live Rates".
+                No rates cached yet. Click "Fetch Live Rates" to fetch gold rates.
               </div>
             )}
           </div>
@@ -700,25 +688,6 @@ export default function Index() {
           <div className="card">
             <h2>Configuration Panel</h2>
             <form onSubmit={handleSaveSettings}>
-              <div className="form-group">
-                <label>Gold API Provider</label>
-                <select name="apiProvider" className="form-control" defaultValue={settings.apiProvider}>
-                  <option value="goldapi">GoldAPI.io</option>
-                  <option value="metalpriceapi">MetalPriceAPI.com</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Gold API Key</label>
-                <input
-                  type="password"
-                  name="apiKey"
-                  className="form-control"
-                  placeholder="Enter API Secret Key"
-                  defaultValue={settings.apiKey}
-                />
-              </div>
-
               <div className="form-group">
                 <label>Making Charge</label>
                 <div className="input-row">
