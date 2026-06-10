@@ -420,4 +420,37 @@ export async function ensureMetafieldDefinitions(admin) {
   }
 }
 
+/**
+ * Wraps or returns a custom GraphQL client if the merchant has supplied a custom Store Domain & Access Token in Settings.
+ */
+export function getAdminClient(sessionAdmin, settings) {
+  if (settings?.syncAccessToken && settings?.syncShopifyDomain) {
+    const shopDomain = settings.syncShopifyDomain.trim();
+    const token = settings.syncAccessToken.trim();
+    
+    if (shopDomain && token) {
+      console.log(`Using custom API integration client for shop: ${shopDomain}`);
+      return {
+        graphql: async (query, options = {}) => {
+          const url = `https://${shopDomain}/admin/api/2026-07/graphql.json`;
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Shopify-Access-Token": token,
+            },
+            body: JSON.stringify({
+              query,
+              variables: options.variables,
+            }),
+          });
+          return response;
+        }
+      };
+    }
+  }
+  return sessionAdmin;
+}
+
+
 

@@ -47,7 +47,9 @@ model GoldSettings {
   minRate18K          Float    @default(0.0)
   blockPriceDecreases Boolean  @default(false)
   autoPushOnIncrease  Boolean  @default(true)
-  updateFrequency     String   @default("daily")
+  updateFrequency     String   @default( "daily")
+  syncShopifyDomain   String   @default("")
+  syncAccessToken     String   @default("")
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

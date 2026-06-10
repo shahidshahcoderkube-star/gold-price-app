@@ -5,18 +5,11 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { fetchGoldRates, getEffectiveRates } from "../gold.server";
-import { fetchGoldProducts, syncProductPrices, ensureMetafieldDefinitions } from "../shopify.products.server";
+import { fetchGoldProducts, syncProductPrices, ensureMetafieldDefinitions, getAdminClient } from "../shopify.products.server";
 
 export const loader = async ({ request }) => {
-  const { admin, session } = await authenticate.admin(request);
+  const { admin: sessionAdmin, session } = await authenticate.admin(request);
   const shop = session.shop;
-
-  // Automatically ensure that metafield definitions exist for the merchant's store
-  try {
-    await ensureMetafieldDefinitions(admin);
-  } catch (err) {
-    console.error("Error ensuring gold metafield definitions:", err);
-  }
 
   // 1. Get Settings or create default
   let settings = await prisma.goldSettings.findUnique({ where: { shop } });
@@ -38,6 +31,16 @@ export const loader = async ({ request }) => {
         updateFrequency: "daily",
       },
     });
+  }
+
+  // Wrap admin client with getAdminClient
+  const admin = getAdminClient(sessionAdmin, settings);
+
+  // Automatically ensure that metafield definitions exist for the store (using either session or custom credentials)
+  try {
+    await ensureMetafieldDefinitions(admin);
+  } catch (err) {
+    console.error("Error ensuring gold metafield definitions:", err);
   }
 
   // 2. Get Cached Rates
@@ -68,7 +71,7 @@ export const loader = async ({ request }) => {
 };
 
 export const action = async ({ request }) => {
-  const { admin, session } = await authenticate.admin(request);
+  const { admin: sessionAdmin, session } = await authenticate.admin(request);
   const shop = session.shop;
 
   const formData = await request.formData();
@@ -78,6 +81,9 @@ export const action = async ({ request }) => {
   if (!settings) {
     return Response.json({ error: "Settings not found." }, { status: 400 });
   }
+
+  const admin = getAdminClient(sessionAdmin, settings);
+
 
   if (intent === "save_settings") {
     const makingChargeType = formData.get("makingChargeType") || "percentage";

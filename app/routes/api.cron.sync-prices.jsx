@@ -1,7 +1,7 @@
 import { unauthenticated } from "../shopify.server";
 import prisma from "../db.server";
 import { fetchGoldRates, getEffectiveRates } from "../gold.server";
-import { syncProductPrices } from "../shopify.products.server";
+import { syncProductPrices, getAdminClient } from "../shopify.products.server";
 
 export const loader = async ({ request }) => {
   // 1. Authorize the request (Vercel Cron security check in production)
@@ -25,7 +25,8 @@ export const loader = async ({ request }) => {
       const effectiveRates = getEffectiveRates(liveRates, settings);
 
       // 4. Retrieve offline Shopify Admin API client for the store
-      const { admin } = await unauthenticated.admin(shop);
+      const { admin: sessionAdmin } = await unauthenticated.admin(shop);
+      const admin = getAdminClient(sessionAdmin, settings);
 
       // 5. Update prices of qualifying gold products
       const updatedCount = await syncProductPrices(admin, settings, effectiveRates);
