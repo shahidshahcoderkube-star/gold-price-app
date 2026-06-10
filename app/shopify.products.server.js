@@ -213,8 +213,35 @@ const CREATE_METAFIELD_DEF_MUTATION = `#graphql
   }
 `;
 
+const GET_METAFIELD_DEF_QUERY = `#graphql
+  query GetMetafieldDefinition($ownerType: MetafieldOwnerType!, $namespace: String!, $key: String!) {
+    metafieldDefinitions(first: 1, ownerType: $ownerType, namespace: $namespace, key: $key) {
+      edges {
+        node {
+          id
+          pinned
+        }
+      }
+    }
+  }
+`;
+
+const PIN_METAFIELD_DEF_MUTATION = `#graphql
+  mutation MetafieldDefinitionPin($definitionId: ID!) {
+    metafieldDefinitionPin(definitionId: $definitionId) {
+      pinnedDefinition {
+        id
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
 /**
- * Automatically registers the Product and Variant level gold weight and karat metafield definitions on install/startup.
+ * Automatically registers and pins the Product and Variant level gold weight and karat metafield definitions on install/startup.
  */
 export async function ensureMetafieldDefinitions(admin) {
   const definitions = [
@@ -250,21 +277,56 @@ export async function ensureMetafieldDefinitions(admin) {
 
   for (const def of definitions) {
     try {
+      let definitionId = null;
+      let isAlreadyPinned = false;
+
+      // 1. Try to create the definition
       const response = await admin.graphql(CREATE_METAFIELD_DEF_MUTATION, {
         variables: {
           definition: def,
         },
       });
       const responseJson = await response.json();
-      const userErrors = responseJson.data?.metafieldDefinitionCreate?.userErrors || [];
-      for (const error of userErrors) {
-        if (error.code !== "TAKEN" && error.code !== "UNiquenessValidationError") {
-          console.warn(`Note: Metafield definition ${def.ownerType}.${def.key} error:`, error.message);
+      const createData = responseJson.data?.metafieldDefinitionCreate;
+      
+      if (createData?.createdDefinition) {
+        definitionId = createData.createdDefinition.id;
+      } else {
+        // Creation failed (likely because it already exists). Fetch the existing definition GID.
+        const queryResponse = await admin.graphql(GET_METAFIELD_DEF_QUERY, {
+          variables: {
+            ownerType: def.ownerType,
+            namespace: def.namespace,
+            key: def.key,
+          },
+        });
+        const queryJson = await queryResponse.json();
+        const existingNode = queryJson.data?.metafieldDefinitions?.edges?.[0]?.node;
+        if (existingNode) {
+          definitionId = existingNode.id;
+          isAlreadyPinned = existingNode.pinned;
+        }
+      }
+
+      // 2. Pin the definition if it exists and is not already pinned
+      if (definitionId && !isAlreadyPinned) {
+        const pinResponse = await admin.graphql(PIN_METAFIELD_DEF_MUTATION, {
+          variables: {
+            definitionId,
+          },
+        });
+        const pinJson = await pinResponse.json();
+        const pinErrors = pinJson.data?.metafieldDefinitionPin?.userErrors || [];
+        if (pinErrors.length > 0) {
+          console.warn(`Note: Failed to pin metafield definition ${def.ownerType}.${def.key}:`, pinErrors[0].message);
+        } else {
+          console.log(`Successfully pinned metafield definition ${def.ownerType}.${def.key}`);
         }
       }
     } catch (err) {
-      console.error(`Error registering metafield definition for ${def.ownerType}.${def.key}:`, err);
+      console.error(`Error registering/pinning metafield definition for ${def.ownerType}.${def.key}:`, err);
     }
   }
 }
+
 
