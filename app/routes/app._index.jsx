@@ -211,6 +211,11 @@ export default function Index() {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [karatFilter, setKaratFilter] = useState("ALL");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isSubmitting = fetcher.state !== "idle";
 
@@ -570,7 +575,7 @@ export default function Index() {
                   </div>
                 </div>
                 <div className="text-muted" style={{ textAlign: "right" }}>
-                  Last Checked: {new Date(rateCache.updatedAt).toLocaleString()}
+                  Last Checked: {mounted ? new Date(rateCache.updatedAt).toLocaleString() : "Loading..."}
                 </div>
               </div>
             ) : (
@@ -798,8 +803,14 @@ export default function Index() {
                     logs.map((log) => (
                       <tr key={log.id}>
                         <td>
-                          <div>{new Date(log.timestamp).toLocaleDateString()}</div>
-                          <div className="text-muted">{new Date(log.timestamp).toLocaleTimeString()}</div>
+                          {mounted ? (
+                            <>
+                              <div>{new Date(log.timestamp).toLocaleDateString()}</div>
+                              <div className="text-muted">{new Date(log.timestamp).toLocaleTimeString()}</div>
+                            </>
+                          ) : (
+                            <div>Loading...</div>
+                          )}
                         </td>
                         <td>
                           <span className={`badge badge-${log.status === "SUCCESS" ? "success" : "danger"}`}>
