@@ -25,8 +25,6 @@ export const loader = async ({ request }) => {
         blockPriceDecreases: false,
         autoPushOnIncrease: true,
         updateFrequency: "daily",
-        syncShopifyDomain: "",
-        syncAccessToken: "",
       },
     });
   }
@@ -39,25 +37,36 @@ export const action = async ({ request }) => {
   const shop = session.shop;
 
   const formData = await request.formData();
-  const syncShopifyDomain = formData.get("syncShopifyDomain")?.trim() || "";
-  const syncAccessToken = formData.get("syncAccessToken")?.trim() || "";
-
-  // Validation
-  if (syncShopifyDomain && !syncShopifyDomain.includes("myshopify.com")) {
-    return Response.json({ error: "Store Domain must be a valid .myshopify.com URL." }, { status: 400 });
-  }
+  const makingChargeType = formData.get("makingChargeType") || "percentage";
+  const makingChargeValue = parseFloat(formData.get("makingChargeValue")) || 0;
+  const profitMarginType = formData.get("profitMarginType") || "percentage";
+  const profitMarginValue = parseFloat(formData.get("profitMarginValue")) || 0;
+  const minRate24K = parseFloat(formData.get("minRate24K")) || 0;
+  const minRate22K = parseFloat(formData.get("minRate22K")) || 0;
+  const minRate18K = parseFloat(formData.get("minRate18K")) || 0;
+  const blockPriceDecreases = formData.get("blockPriceDecreases") === "true";
+  const autoPushOnIncrease = formData.get("autoPushOnIncrease") === "true";
+  const updateFrequency = formData.get("updateFrequency") || "daily";
 
   const settings = await prisma.goldSettings.update({
     where: { shop },
     data: {
-      syncShopifyDomain,
-      syncAccessToken,
+      makingChargeType,
+      makingChargeValue,
+      profitMarginType,
+      profitMarginValue,
+      minRate24K,
+      minRate22K,
+      minRate18K,
+      blockPriceDecreases,
+      autoPushOnIncrease,
+      updateFrequency,
     },
   });
 
   return Response.json({
     success: true,
-    message: "Shopify connection settings saved successfully!",
+    message: "Pricing settings saved successfully!",
     settings,
   });
 };
@@ -90,6 +99,13 @@ export default function SettingsPage() {
   }, [fetcher.data, shopify]);
 
   if (!mounted) return null;
+
+  const handleSaveSettings = (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    fetcher.submit(data, { method: "POST" });
+  };
 
   return (
     <div className="gold-app-container">
@@ -150,6 +166,13 @@ export default function SettingsPage() {
           margin-bottom: 6px;
           color: #303030;
         }
+        .input-row {
+          display: flex;
+          gap: 10px;
+        }
+        .form-control, .btn, select, input, button {
+          font-family: inherit;
+        }
         .form-control {
           width: 100%;
           padding: 8px 12px;
@@ -159,7 +182,6 @@ export default function SettingsPage() {
           box-sizing: border-box;
           outline: none;
           color: #303030;
-          font-family: inherit;
         }
         .form-control:focus {
           border-color: #303030;
@@ -176,7 +198,6 @@ export default function SettingsPage() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          font-family: inherit;
         }
         .btn:hover {
           background: #1a1a1a;
@@ -188,111 +209,167 @@ export default function SettingsPage() {
           color: #8c9196;
           cursor: not-allowed;
         }
-        .badge {
-          display: inline-block;
-          padding: 3px 8px;
-          border-radius: 12px;
-          font-size: 11px;
-          font-weight: 600;
+        .checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          cursor: pointer;
+          font-size: 13px;
+          margin-top: 10px;
         }
-        .badge-success {
-          background: #e6f4ea;
-          color: #137333;
+        .checkbox-label input {
+          width: 16px;
+          height: 16px;
         }
         .text-muted {
           color: #6d7175;
           font-size: 12px;
-          line-height: 1.6;
-        }
-        ol {
-          padding-left: 20px;
-          margin: 10px 0;
-        }
-        li {
-          margin-bottom: 8px;
-          font-size: 13px;
-          color: #303030;
         }
       `}</style>
 
       <div className="header">
-        <h1>Shopify Sync Settings</h1>
+        <h1>Global Configurations Settings</h1>
       </div>
 
-      <div className="grid">
-        {/* LEFT PANEL */}
-        <div>
-          <div className="card">
-            <h2>
-              Connect Your Shopify Store
-              {settings.syncShopifyDomain && settings.syncAccessToken && (
-                <span className="badge badge-success">Connected</span>
-              )}
-            </h2>
-            
-            <p className="text-muted" style={{ marginBottom: "20px" }}>
-              Enter your Shopify store domain and a private app access token with read/write access to Products to automate dynamic gold pricing calculations.
-            </p>
-
-            <fetcher.Form method="post">
+      <form onSubmit={handleSaveSettings}>
+        <div className="grid">
+          {/* LEFT PANEL */}
+          <div>
+            <div className="card">
+              <h2>Gold Price Margins & Charges</h2>
+              
               <div className="form-group">
-                <label htmlFor="syncShopifyDomain">Store Domain</label>
+                <label>Making Charge</label>
+                <div className="input-row">
+                  <select
+                    name="makingChargeType"
+                    className="form-control"
+                    style={{ width: "60%" }}
+                    defaultValue={settings.makingChargeType}
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="flat">Flat Price ($)</option>
+                  </select>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="makingChargeValue"
+                    className="form-control"
+                    placeholder="Value"
+                    defaultValue={settings.makingChargeValue}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Profit Margin</label>
+                <div className="input-row">
+                  <select
+                    name="profitMarginType"
+                    className="form-control"
+                    style={{ width: "60%" }}
+                    defaultValue={settings.profitMarginType}
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="flat">Flat Price ($)</option>
+                  </select>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="profitMarginValue"
+                    className="form-control"
+                    placeholder="Value"
+                    defaultValue={settings.profitMarginValue}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="card">
+              <h2>Minimum Safe Floor Rates (Stop-Loss)</h2>
+              <p className="text-muted" style={{ marginBottom: "15px" }}>
+                Ensure calculations never fall below these minimum thresholds even if the global metal market drops.
+              </p>
+
+              <div className="form-group">
+                <label className="text-muted">24K Minimum (per gram)</label>
                 <input
-                  type="text"
-                  id="syncShopifyDomain"
-                  name="syncShopifyDomain"
-                  placeholder="yourstore.myshopify.com"
+                  type="number"
+                  step="0.01"
+                  name="minRate24K"
                   className="form-control"
-                  defaultValue={settings.syncShopifyDomain}
-                  required
+                  defaultValue={settings.minRate24K}
                 />
               </div>
-
               <div className="form-group">
-                <label htmlFor="syncAccessToken">Access Token</label>
+                <label className="text-muted">22K Minimum (per gram)</label>
                 <input
-                  type="password"
-                  id="syncAccessToken"
-                  name="syncAccessToken"
-                  placeholder="shpat_xxxxxxxxxxxxxxxx"
+                  type="number"
+                  step="0.01"
+                  name="minRate22K"
                   className="form-control"
-                  defaultValue={settings.syncAccessToken}
-                  required
+                  defaultValue={settings.minRate22K}
                 />
               </div>
-
-              <div style={{ marginTop: "20px" }}>
-                <button type="submit" className="btn" disabled={isSubmitting}>
-                  {isSubmitting ? "Connecting..." : "Connect & Save Settings"}
-                </button>
+              <div className="form-group">
+                <label className="text-muted">18K Minimum (per gram)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  name="minRate18K"
+                  className="form-control"
+                  defaultValue={settings.minRate18K}
+                />
               </div>
-            </fetcher.Form>
+            </div>
           </div>
-        </div>
 
-        {/* RIGHT PANEL (GUIDE) */}
-        <div>
-          <div className="card">
-            <h2>Integration Help Guide</h2>
-            <div className="text-muted">
-              <p>To obtain your Store Domain and Access Token, follow these steps in your Shopify Admin:</p>
-              <ol>
-                <li>Go to <strong>Settings</strong> &gt; <strong>App and sales channels</strong>.</li>
-                <li>Click <strong>Develop apps</strong> at the top.</li>
-                <li>Click <strong>Create an app</strong> and name it (e.g., "Gold Price Sync").</li>
-                <li>Under <strong>Configuration</strong>, configure Admin API scopes:
-                  <ul>
-                    <li>Select <strong>write_products</strong> and <strong>read_products</strong>.</li>
-                  </ul>
-                </li>
-                <li>Under <strong>API credentials</strong>, click <strong>Install app</strong>.</li>
-                <li>Reveal and copy the <strong>Admin API access token</strong> (starts with <code>shpat_</code>).</li>
-                <li>Paste your copied token and store URL here.</li>
-              </ol>
+          {/* RIGHT PANEL */}
+          <div>
+            <div className="card">
+              <h2>Automation Scheduler & Safety</h2>
+              
+              <div className="form-group">
+                <label>Sync Scheduler Settings</label>
+                <select name="updateFrequency" className="form-control" defaultValue={settings.updateFrequency}>
+                  <option value="daily">Daily Updates (8:00 AM)</option>
+                  <option value="hourly">Hourly Updates</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginTop: "20px" }}>
+                <label>Safety Controls</label>
+                
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="blockPriceDecreases"
+                    value="true"
+                    defaultChecked={settings.blockPriceDecreases}
+                  />
+                  <span>Block Price Decreases (Safety Lock)</span>
+                </label>
+
+                <label className="checkbox-label" style={{ marginTop: "12px" }}>
+                  <input
+                    type="checkbox"
+                    name="autoPushOnIncrease"
+                    value="true"
+                    defaultChecked={settings.autoPushOnIncrease}
+                  />
+                  <span>Auto Push On Gold Increase</span>
+                </label>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "20px" }}>
+              <button type="submit" className="btn" style={{ width: "100%" }} disabled={isSubmitting}>
+                {isSubmitting ? "Saving Config..." : "Save Settings"}
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

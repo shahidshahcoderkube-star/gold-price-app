@@ -85,36 +85,6 @@ export const action = async ({ request }) => {
   const admin = getAdminClient(sessionAdmin, settings);
 
 
-  if (intent === "save_settings") {
-    const makingChargeType = formData.get("makingChargeType") || "percentage";
-    const makingChargeValue = parseFloat(formData.get("makingChargeValue")) || 0;
-    const profitMarginType = formData.get("profitMarginType") || "percentage";
-    const profitMarginValue = parseFloat(formData.get("profitMarginValue")) || 0;
-    const minRate24K = parseFloat(formData.get("minRate24K")) || 0;
-    const minRate22K = parseFloat(formData.get("minRate22K")) || 0;
-    const minRate18K = parseFloat(formData.get("minRate18K")) || 0;
-    const blockPriceDecreases = formData.get("blockPriceDecreases") === "true";
-    const autoPushOnIncrease = formData.get("autoPushOnIncrease") === "true";
-    const updateFrequency = formData.get("updateFrequency") || "daily";
-
-    settings = await prisma.goldSettings.update({
-      where: { shop },
-      data: {
-        makingChargeType,
-        makingChargeValue,
-        profitMarginType,
-        profitMarginValue,
-        minRate24K,
-        minRate22K,
-        minRate18K,
-        blockPriceDecreases,
-        autoPushOnIncrease,
-        updateFrequency,
-      },
-    });
-
-    return Response.json({ success: true, message: "Settings saved successfully!", settings });
-  }
 
   if (intent === "fetch_rates") {
     try {
@@ -242,13 +212,6 @@ export default function Index() {
     }
   }, [fetcher.data, shopify]);
 
-  const handleSaveSettings = (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const data = new FormData(form);
-    data.append("intent", "save_settings");
-    fetcher.submit(data, { method: "POST" });
-  };
 
   const handleFetchRates = () => {
     const data = new FormData();
@@ -540,57 +503,8 @@ export default function Index() {
       </div>
 
       <div className="grid">
-        {/* LEFT PANEL */}
+        {/* LEFT PANEL (PRODUCTS LIST) */}
         <div>
-          {/* LIVE GOLD RATES CARD */}
-          <div className="card">
-            <h2>
-              Live Gold Rates (per gram)
-              <button
-                className="btn btn-secondary"
-                style={{ padding: "4px 10px", fontSize: "12px" }}
-                onClick={handleFetchRates}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Updating..." : "Fetch Live Rates"}
-              </button>
-            </h2>
-            {rateCache ? (
-              <div>
-                <div className="rate-boxes">
-                  <div className="rate-box">
-                    <div className="label">24K Gold</div>
-                    <div className="value">${rateCache.rate24K.toFixed(2)}</div>
-                    {rateCache.rate24K < settings.minRate24K && (
-                      <span className="badge badge-warning" style={{ marginTop: "5px" }}>Using Floor: ${settings.minRate24K}</span>
-                    )}
-                  </div>
-                  <div className="rate-box">
-                    <div className="label">22K Gold</div>
-                    <div className="value">${rateCache.rate22K.toFixed(2)}</div>
-                    {rateCache.rate22K < settings.minRate22K && (
-                      <span className="badge badge-warning" style={{ marginTop: "5px" }}>Using Floor: ${settings.minRate22K}</span>
-                    )}
-                  </div>
-                  <div className="rate-box">
-                    <div className="label">18K Gold</div>
-                    <div className="value">${rateCache.rate18K.toFixed(2)}</div>
-                    {rateCache.rate18K < settings.minRate18K && (
-                      <span className="badge badge-warning" style={{ marginTop: "5px" }}>Using Floor: ${settings.minRate18K}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="text-muted" style={{ textAlign: "right" }}>
-                  Last Checked: {mounted ? new Date(rateCache.updatedAt).toLocaleString() : "Loading..."}
-                </div>
-              </div>
-            ) : (
-              <div style={{ textAlign: "center", padding: "20px", color: "#6d7175" }}>
-                No rates cached yet. Click "Fetch Live Rates" to fetch gold rates.
-              </div>
-            )}
-          </div>
-
           {/* PRODUCTS SELECTIVE SYNC TABLE */}
           <div className="card">
             <h2>Selective Product Sync & Testing</h2>
@@ -655,32 +569,20 @@ export default function Index() {
                               onChange={() => toggleSelectProduct(product.id)}
                             />
                           </td>
+                          <td style={{ fontWeight: "600" }}>{product.title}</td>
                           <td>
-                            <div className="flex-center">
-                              {product.imageUrl && (
-                                <img
-                                  src={product.imageUrl}
-                                  alt=""
-                                  style={{ width: "32px", height: "32px", borderRadius: "4px", objectFit: "cover" }}
-                                />
-                              )}
-                              <div>
-                                <div style={{ fontWeight: "500" }}>{product.title}</div>
-                                <div className="text-muted">Variants: {product.variants.length}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="badge" style={{ background: "#f1f2f4", color: "#454f5b" }}>{product.karat}</span>
+                            <span className="badge" style={{ background: "#f1f1f1", color: "#333" }}>
+                              {product.karat}
+                            </span>
                           </td>
                           <td>{product.weight.toFixed(2)}g</td>
-                          <td>
-                            {product.variants.length === 1
-                              ? `$${product.variants[0].currentPrice.toFixed(2)}`
-                              : `$${Math.min(...product.variants.map(v => v.currentPrice)).toFixed(2)} - $${Math.max(...product.variants.map(v => v.currentPrice)).toFixed(2)}`
+                          <td style={{ textDecoration: "line-through", color: "#8c9196" }}>
+                            ${product.variants.length === 1
+                              ? product.variants[0].currentPrice.toFixed(2)
+                              : Math.min(...product.variants.map(v => v.currentPrice)).toFixed(2) + " - " + Math.max(...product.variants.map(v => v.currentPrice)).toFixed(2)
                             }
                           </td>
-                          <td style={{ fontWeight: "600", color: "#008060" }}>
+                          <td style={{ color: "#D4AF37", fontWeight: "700" }}>
                             {calculatedPrice !== "—" ? `$${calculatedPrice.toFixed(2)}` : "—"}
                           </td>
                         </tr>
@@ -699,97 +601,55 @@ export default function Index() {
           </div>
         </div>
 
-        {/* RIGHT PANEL (SETTINGS & LOGS) */}
+        {/* RIGHT PANEL (LIVE RATES & LOGS) */}
         <div>
-          {/* SETTINGS CARD */}
+          {/* LIVE GOLD RATES CARD */}
           <div className="card">
-            <h2>Configuration Panel</h2>
-            <form onSubmit={handleSaveSettings}>
-              <div className="form-group">
-                <label>Making Charge</label>
-                <div className="input-row">
-                  <select name="makingChargeType" className="form-control" style={{ width: "60%" }} defaultValue={settings.makingChargeType}>
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="flat">Flat Price ($)</option>
-                  </select>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="makingChargeValue"
-                    className="form-control"
-                    placeholder="Value"
-                    defaultValue={settings.makingChargeValue}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Profit Margin</label>
-                <div className="input-row">
-                  <select name="profitMarginType" className="form-control" style={{ width: "60%" }} defaultValue={settings.profitMarginType}>
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="flat">Flat Price ($)</option>
-                  </select>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="profitMarginValue"
-                    className="form-control"
-                    placeholder="Value"
-                    defaultValue={settings.profitMarginValue}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group" style={{ marginTop: "15px" }}>
-                <label style={{ fontWeight: "600" }}>Minimum Safe Floor Rates (Stop-Loss)</label>
-                <div className="form-group">
-                  <label className="text-muted">24K Minimum (per gram)</label>
-                  <input type="number" step="0.01" name="minRate24K" className="form-control" defaultValue={settings.minRate24K} />
-                </div>
-                <div className="form-group">
-                  <label className="text-muted">22K Minimum (per gram)</label>
-                  <input type="number" step="0.01" name="minRate22K" className="form-control" defaultValue={settings.minRate22K} />
-                </div>
-                <div className="form-group">
-                  <label className="text-muted">18K Minimum (per gram)</label>
-                  <input type="number" step="0.01" name="minRate18K" className="form-control" defaultValue={settings.minRate18K} />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Sync Scheduler Settings</label>
-                <select name="updateFrequency" className="form-control" defaultValue={settings.updateFrequency}>
-                  <option value="daily">Daily Updates (8:00 AM)</option>
-                  <option value="hourly">Hourly Updates</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="blockPriceDecreases"
-                    value="true"
-                    defaultChecked={settings.blockPriceDecreases}
-                  />
-                  <span>Block Price Decreases (Safety Lock)</span>
-                </label>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="autoPushOnIncrease"
-                    value="true"
-                    defaultChecked={settings.autoPushOnIncrease}
-                  />
-                  <span>Auto Push On Gold Increase</span>
-                </label>
-              </div>
-
-              <button type="submit" className="btn" style={{ width: "100%", marginTop: "10px" }} disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save Settings"}
+            <h2>
+              Live Gold Rates (per gram)
+              <button
+                className="btn btn-secondary"
+                style={{ padding: "4px 10px", fontSize: "12px" }}
+                onClick={handleFetchRates}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Updating..." : "Fetch Live Rates"}
               </button>
-            </form>
+            </h2>
+            {rateCache ? (
+              <div>
+                <div className="rate-boxes">
+                  <div className="rate-box" style={{ padding: "10px" }}>
+                    <div className="label">24K Gold</div>
+                    <div className="value" style={{ fontSize: "16px" }}>${rateCache.rate24K.toFixed(2)}</div>
+                    {rateCache.rate24K < settings.minRate24K && (
+                      <span className="badge badge-warning" style={{ marginTop: "5px", fontSize: "10px" }}>Floor: ${settings.minRate24K}</span>
+                    )}
+                  </div>
+                  <div className="rate-box" style={{ padding: "10px" }}>
+                    <div className="label">22K Gold</div>
+                    <div className="value" style={{ fontSize: "16px" }}>${rateCache.rate22K.toFixed(2)}</div>
+                    {rateCache.rate22K < settings.minRate22K && (
+                      <span className="badge badge-warning" style={{ marginTop: "5px", fontSize: "10px" }}>Floor: ${settings.minRate22K}</span>
+                    )}
+                  </div>
+                  <div className="rate-box" style={{ padding: "10px" }}>
+                    <div className="label">18K Gold</div>
+                    <div className="value" style={{ fontSize: "16px" }}>${rateCache.rate18K.toFixed(2)}</div>
+                    {rateCache.rate18K < settings.minRate18K && (
+                      <span className="badge badge-warning" style={{ marginTop: "5px", fontSize: "10px" }}>Floor: ${settings.minRate18K}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-muted" style={{ textAlign: "right" }}>
+                  Last Checked: {mounted ? new Date(rateCache.updatedAt).toLocaleString() : "Loading..."}
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: "center", padding: "20px", color: "#6d7175" }}>
+                No rates cached yet. Click "Fetch Live Rates" to fetch gold rates.
+              </div>
+            )}
           </div>
 
           {/* ACTIVITY LOGS */}
