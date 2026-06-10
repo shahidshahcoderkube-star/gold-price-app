@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "afa25e4520e78d160d72f65c38ac7c4d"
-application_url = " https://cut-correction-nextel-rated.trycloudflare.com"
+application_url = "https://gold-price-app-hazel.vercel.app/"
 embedded = true
 name = "Gold price App"
 
@@ -45,8 +45,7 @@ api_version = "2026-07"
   topics = [ "app/scopes_update" ]
 
 [auth]
-redirect_urls = [ "h https://cut-correction-nextel-rated.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://gold-price-app-hazel.vercel.app/api/auth" ]
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
