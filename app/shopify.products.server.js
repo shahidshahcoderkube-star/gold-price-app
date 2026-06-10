@@ -220,7 +220,23 @@ const GET_METAFIELD_DEF_QUERY = `#graphql
         node {
           id
           pinned
+          validationRules {
+            name
+            value
+          }
         }
+      }
+    }
+  }
+`;
+
+const DELETE_METAFIELD_DEF_MUTATION = `#graphql
+  mutation DeleteMetafieldDefinition($id: ID!, $deleteAllAssociatedMetafields: Boolean!) {
+    metafieldDefinitionDelete(id: $id, deleteAllAssociatedMetafields: $deleteAllAssociatedMetafields) {
+      deletedDefinitionId
+      userErrors {
+        field
+        message
       }
     }
   }
@@ -346,6 +362,36 @@ export async function ensureMetafieldDefinitions(admin) {
             const updateErrors = updateJson.data?.metafieldDefinitionUpdate?.userErrors || [];
             if (updateErrors.length > 0) {
               console.warn(`Note: Failed to update validation choices for ${def.ownerType}.${def.key}:`, updateErrors[0].message);
+              console.log(`Attempting to delete and re-create definition for ${def.ownerType}.${def.key} to force dropdown configuration...`);
+              
+              // Delete existing definition (which resolves validation mismatch immediately)
+              const deleteResponse = await admin.graphql(DELETE_METAFIELD_DEF_MUTATION, {
+                variables: {
+                  id: definitionId,
+                  deleteAllAssociatedMetafields: true,
+                },
+              });
+              const deleteJson = await deleteResponse.json();
+              const deleteErrors = deleteJson.data?.metafieldDefinitionDelete?.userErrors || [];
+              
+              if (deleteErrors.length === 0) {
+                // Re-create the definition with choices from scratch
+                const reCreateResponse = await admin.graphql(CREATE_METAFIELD_DEF_MUTATION, {
+                  variables: {
+                    definition: def,
+                  },
+                });
+                const reCreateJson = await reCreateResponse.json();
+                const reCreateData = reCreateJson.data?.metafieldDefinitionCreate;
+                if (reCreateData?.createdDefinition) {
+                  definitionId = reCreateData.createdDefinition.id;
+                  console.log(`Successfully recreated definition with choices for ${def.ownerType}.${def.key} (${definitionId})`);
+                } else {
+                  console.error(`Failed to recreate definition for ${def.ownerType}.${def.key}:`, JSON.stringify(reCreateJson));
+                }
+              } else {
+                console.error(`Failed to delete definition for ${def.ownerType}.${def.key}:`, deleteErrors[0].message);
+              }
             } else {
               console.log(`Successfully updated validation choices for ${def.ownerType}.${def.key}`);
             }
