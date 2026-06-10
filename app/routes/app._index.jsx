@@ -18,6 +18,22 @@ export const loader = async ({ request }) => {
     console.error("Error ensuring gold metafield definitions:", err);
   }
 
+  // Fetch store currency from Shopify
+  let currencyCode = "USD";
+  try {
+    const shopResponse = await admin.graphql(`
+      query getShopCurrency {
+        shop {
+          currencyCode
+        }
+      }
+    `);
+    const shopData = await shopResponse.json();
+    currencyCode = shopData?.data?.shop?.currencyCode || "USD";
+  } catch (err) {
+    console.error("Error fetching shop currency:", err);
+  }
+
   // 1. Get Settings or create default
   let settings = await prisma.goldSettings.findUnique({ where: { shop } });
   if (!settings) {
@@ -36,7 +52,13 @@ export const loader = async ({ request }) => {
         blockPriceDecreases: false,
         autoPushOnIncrease: true,
         updateFrequency: "daily",
+        currency: currencyCode,
       },
+    });
+  } else if (settings.currency !== currencyCode) {
+    settings = await prisma.goldSettings.update({
+      where: { shop },
+      data: { currency: currencyCode },
     });
   }
 
@@ -324,6 +346,13 @@ export default function Index() {
     return Math.round((costBasis + profitMargin) * 100) / 100;
   };
 
+  const currency = settings.currency || "USD";
+
+  const formatPrice = (val) => {
+    if (val === undefined || val === null || isNaN(val)) return "—";
+    return `${parseFloat(val).toFixed(2)} ${currency}`;
+  };
+
   return (
     <div className="gold-app-container">
       <style>{`
@@ -554,23 +583,23 @@ export default function Index() {
                 <div className="rate-boxes">
                   <div className="rate-box">
                     <div className="label">24K Gold</div>
-                    <div className="value">${rateCache.rate24K.toFixed(2)}</div>
+                    <div className="value">{formatPrice(rateCache.rate24K)}</div>
                     {rateCache.rate24K < settings.minRate24K && (
-                      <span className="badge badge-warning" style={{ marginTop: "5px" }}>Using Floor: ${settings.minRate24K}</span>
+                      <span className="badge badge-warning" style={{ marginTop: "5px" }}>Using Floor: {formatPrice(settings.minRate24K)}</span>
                     )}
                   </div>
                   <div className="rate-box">
                     <div className="label">22K Gold</div>
-                    <div className="value">${rateCache.rate22K.toFixed(2)}</div>
+                    <div className="value">{formatPrice(rateCache.rate22K)}</div>
                     {rateCache.rate22K < settings.minRate22K && (
-                      <span className="badge badge-warning" style={{ marginTop: "5px" }}>Using Floor: ${settings.minRate22K}</span>
+                      <span className="badge badge-warning" style={{ marginTop: "5px" }}>Using Floor: {formatPrice(settings.minRate22K)}</span>
                     )}
                   </div>
                   <div className="rate-box">
                     <div className="label">18K Gold</div>
-                    <div className="value">${rateCache.rate18K.toFixed(2)}</div>
+                    <div className="value">{formatPrice(rateCache.rate18K)}</div>
                     {rateCache.rate18K < settings.minRate18K && (
-                      <span className="badge badge-warning" style={{ marginTop: "5px" }}>Using Floor: ${settings.minRate18K}</span>
+                      <span className="badge badge-warning" style={{ marginTop: "5px" }}>Using Floor: {formatPrice(settings.minRate18K)}</span>
                     )}
                   </div>
                 </div>
@@ -670,12 +699,12 @@ export default function Index() {
                           <td>{product.weight.toFixed(2)}g</td>
                           <td>
                             {product.variants.length === 1
-                              ? `$${product.variants[0].currentPrice.toFixed(2)}`
-                              : `$${Math.min(...product.variants.map(v => v.currentPrice)).toFixed(2)} - $${Math.max(...product.variants.map(v => v.currentPrice)).toFixed(2)}`
+                              ? formatPrice(product.variants[0].currentPrice)
+                              : `${formatPrice(Math.min(...product.variants.map(v => v.currentPrice)))} - ${formatPrice(Math.max(...product.variants.map(v => v.currentPrice)))}`
                             }
                           </td>
-                          <td style={{ fontWeight: "600", color: "#008060" }}>
-                            {calculatedPrice !== "—" ? `$${calculatedPrice.toFixed(2)}` : "—"}
+                          <td style={{ fontWeight: "600", color: "#D4AF37" }}>
+                            {calculatedPrice !== "—" ? formatPrice(calculatedPrice) : "—"}
                           </td>
                         </tr>
                       );
@@ -704,7 +733,7 @@ export default function Index() {
                 <div className="input-row">
                   <select name="makingChargeType" className="form-control" style={{ width: "60%" }} defaultValue={settings.makingChargeType}>
                     <option value="percentage">Percentage (%)</option>
-                    <option value="flat">Flat Price ($)</option>
+                    <option value="flat">Flat Price ({currency})</option>
                   </select>
                   <input
                     type="number"
@@ -722,7 +751,7 @@ export default function Index() {
                 <div className="input-row">
                   <select name="profitMarginType" className="form-control" style={{ width: "60%" }} defaultValue={settings.profitMarginType}>
                     <option value="percentage">Percentage (%)</option>
-                    <option value="flat">Flat Price ($)</option>
+                    <option value="flat">Flat Price ({currency})</option>
                   </select>
                   <input
                     type="number"
@@ -738,15 +767,15 @@ export default function Index() {
               <div className="form-group" style={{ marginTop: "15px" }}>
                 <label style={{ fontWeight: "600" }}>Minimum Safe Floor Rates (Stop-Loss)</label>
                 <div className="form-group">
-                  <label className="text-muted">24K Minimum (per gram)</label>
+                  <label className="text-muted">24K Minimum (per gram in {currency})</label>
                   <input type="number" step="0.01" name="minRate24K" className="form-control" defaultValue={settings.minRate24K} />
                 </div>
                 <div className="form-group">
-                  <label className="text-muted">22K Minimum (per gram)</label>
+                  <label className="text-muted">22K Minimum (per gram in {currency})</label>
                   <input type="number" step="0.01" name="minRate22K" className="form-control" defaultValue={settings.minRate22K} />
                 </div>
                 <div className="form-group">
-                  <label className="text-muted">18K Minimum (per gram)</label>
+                  <label className="text-muted">18K Minimum (per gram in {currency})</label>
                   <input type="number" step="0.01" name="minRate18K" className="form-control" defaultValue={settings.minRate18K} />
                 </div>
               </div>

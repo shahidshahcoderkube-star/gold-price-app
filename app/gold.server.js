@@ -10,9 +10,10 @@ const OUNCE_TO_GRAM = 31.1034768;
 export async function fetchGoldRates(settings = {}) {
   // Developer's global API Key for Metals.dev
   const apiKey = "HGGUMKYGD3OXYMLYKTTM686LYKTTM";
+  const currency = settings.currency || "USD";
 
   const response = await fetch(
-    `https://api.metals.dev/v1/latest?api_key=${apiKey}&currency=USD&unit=toz`
+    `https://api.metals.dev/v1/latest?api_key=${apiKey}&currency=${currency}&unit=toz`
   );
 
   if (!response.ok) {
@@ -21,20 +22,21 @@ export async function fetchGoldRates(settings = {}) {
   }
 
   const data = await response.json();
-  let ratePerOunceUSD = 0;
+  let ratePerOunce = 0;
   if (data && data.metals) {
-    ratePerOunceUSD = data.metals.gold;
+    ratePerOunce = data.metals.gold;
   } else if (data && data.rates) {
     // Fallback if rates is provided instead of metals object
-    ratePerOunceUSD = data.rates.USDXAU || (data.rates.XAU ? 1 / data.rates.XAU : 0);
+    const currencyXAU = `${currency}XAU`;
+    ratePerOunce = data.rates[currencyXAU] || (data.rates.XAU ? 1 / data.rates.XAU : 0);
   }
 
-  if (!ratePerOunceUSD || isNaN(ratePerOunceUSD)) {
+  if (!ratePerOunce || isNaN(ratePerOunce)) {
     throw new Error(`Invalid gold rate fetched from Metals.dev API. Response keys: ${Object.keys(data || {})}`);
   }
 
   // Convert price per Ounce to price per Gram
-  const rate24K = ratePerOunceUSD / OUNCE_TO_GRAM;
+  const rate24K = ratePerOunce / OUNCE_TO_GRAM;
 
   // Calculate 22K and 18K based on 24K purity proportions
   const rate22K = rate24K * (22 / 24);

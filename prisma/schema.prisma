@@ -50,6 +50,7 @@ model GoldSettings {
   updateFrequency     String   @default( "daily")
   syncShopifyDomain   String   @default("")
   syncAccessToken     String   @default("")
+  currency            String   @default("USD")
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
