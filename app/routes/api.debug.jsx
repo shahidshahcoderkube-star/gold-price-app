@@ -7,6 +7,7 @@ export const loader = async () => {
       SHOPIFY_API_SECRET: !!process.env.SHOPIFY_API_SECRET,
       SHOPIFY_APP_URL: process.env.SHOPIFY_APP_URL || null,
       DATABASE_URL: !!process.env.DATABASE_URL,
+      DATABASE_URL_HAS_PGBOUNCER: process.env.DATABASE_URL?.includes("pgbouncer=true") || false,
       NODE_ENV: process.env.NODE_ENV,
     };
 
