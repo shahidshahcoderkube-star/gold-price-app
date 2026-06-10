@@ -240,6 +240,20 @@ const PIN_METAFIELD_DEF_MUTATION = `#graphql
   }
 `;
 
+const UPDATE_METAFIELD_DEF_MUTATION = `#graphql
+  mutation UpdateMetafieldDefinition($definition: MetafieldDefinitionUpdateInput!) {
+    metafieldDefinitionUpdate(definition: $definition) {
+      updatedDefinition {
+        id
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
 /**
  * Automatically registers and pins the Product and Variant level gold weight and karat metafield definitions on install/startup.
  */
@@ -258,6 +272,12 @@ export async function ensureMetafieldDefinitions(admin) {
       key: "gold_karat",
       ownerType: "PRODUCT",
       type: "single_line_text_field",
+      validations: [
+        {
+          name: "choices",
+          value: JSON.stringify(["18K", "22K", "24K"]),
+        },
+      ],
     },
     {
       name: "Gold Weight",
@@ -272,13 +292,18 @@ export async function ensureMetafieldDefinitions(admin) {
       key: "gold_karat",
       ownerType: "PRODUCTVARIANT",
       type: "single_line_text_field",
+      validations: [
+        {
+          name: "choices",
+          value: JSON.stringify(["18K", "22K", "24K"]),
+        },
+      ],
     },
   ];
 
   for (const def of definitions) {
     try {
       let definitionId = null;
-      let isAlreadyPinned = false;
 
       // 1. Try to create the definition
       const response = await admin.graphql(CREATE_METAFIELD_DEF_MUTATION, {
@@ -291,6 +316,7 @@ export async function ensureMetafieldDefinitions(admin) {
       
       if (createData?.createdDefinition) {
         definitionId = createData.createdDefinition.id;
+        console.log(`Created metafield definition: ${def.ownerType}.${def.key} (${definitionId})`);
       } else {
         // Creation failed (likely because it already exists). Fetch the existing definition GID.
         const queryResponse = await admin.graphql(GET_METAFIELD_DEF_QUERY, {
@@ -304,12 +330,31 @@ export async function ensureMetafieldDefinitions(admin) {
         const existingNode = queryJson.data?.metafieldDefinitions?.edges?.[0]?.node;
         if (existingNode) {
           definitionId = existingNode.id;
-          isAlreadyPinned = existingNode.pinned;
+          console.log(`Found existing metafield definition: ${def.ownerType}.${def.key} (${definitionId})`);
+
+          // Update validation choices for gold_karat
+          if (def.key === "gold_karat") {
+            const updateResponse = await admin.graphql(UPDATE_METAFIELD_DEF_MUTATION, {
+              variables: {
+                definition: {
+                  id: definitionId,
+                  validations: def.validations,
+                },
+              },
+            });
+            const updateJson = await updateResponse.json();
+            const updateErrors = updateJson.data?.metafieldDefinitionUpdate?.userErrors || [];
+            if (updateErrors.length > 0) {
+              console.warn(`Note: Failed to update validation choices for ${def.ownerType}.${def.key}:`, updateErrors[0].message);
+            } else {
+              console.log(`Successfully updated validation choices for ${def.ownerType}.${def.key}`);
+            }
+          }
         }
       }
 
-      // 2. Pin the definition if it exists and is not already pinned
-      if (definitionId && !isAlreadyPinned) {
+      // 2. Always attempt to pin the definition
+      if (definitionId) {
         const pinResponse = await admin.graphql(PIN_METAFIELD_DEF_MUTATION, {
           variables: {
             definitionId,
