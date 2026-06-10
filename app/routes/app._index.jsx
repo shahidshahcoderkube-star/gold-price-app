@@ -398,13 +398,16 @@ export default function Index() {
         .form-group label {
           display: block;
           font-size: 13px;
-          font-weight: 500;
-          margin-bottom: 5px;
-          color: #202223;
+          font-weight: 600;
+          margin-bottom: 6px;
+          color: #303030;
         }
         .input-row {
           display: flex;
           gap: 10px;
+        }
+        .form-control, .btn, select, input, button {
+          font-family: inherit;
         }
         .form-control {
           width: 100%;
@@ -414,14 +417,15 @@ export default function Index() {
           font-size: 14px;
           box-sizing: border-box;
           outline: none;
+          color: #303030;
         }
         .form-control:focus {
-          border-color: #008060;
+          border-color: #303030;
         }
         .btn {
-          background: #008060;
+          background: #303030;
           color: white;
-          border: 1px solid #008060;
+          border: 1px solid #303030;
           padding: 8px 16px;
           border-radius: 5px;
           font-size: 14px;
@@ -432,7 +436,8 @@ export default function Index() {
           justify-content: center;
         }
         .btn:hover {
-          background: #006e52;
+          background: #1a1a1a;
+          border-color: #1a1a1a;
         }
         .btn-secondary {
           background: #ffffff;
@@ -443,8 +448,9 @@ export default function Index() {
           background: #f6f6f7;
         }
         .btn:disabled {
-          background: #b3dcd2;
-          border-color: #b3dcd2;
+          background: #e1e3e5;
+          border-color: #e1e3e5;
+          color: #8c9196;
           cursor: not-allowed;
         }
         .btn-secondary:disabled {
