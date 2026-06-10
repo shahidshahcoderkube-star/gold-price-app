@@ -95,171 +95,203 @@ export default function SettingsPage() {
     <div className="gold-app-container">
       <style>{`
         .gold-app-container {
-          font-family: var(--p-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+          font-family: var(--p-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol");
           padding: 20px;
           background: #f6f6f7;
           min-height: 100vh;
           color: #202223;
         }
         .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
           margin-bottom: 24px;
         }
         .header h1 {
           font-size: 24px;
           font-weight: 600;
           color: #202223;
-          margin: 0;
         }
-        .header p {
-          font-size: 14px;
-          color: #6d7175;
-          margin: 4px 0 0 0;
+        .grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 20px;
+        }
+        @media (max-width: 900px) {
+          .grid {
+            grid-template-columns: 1fr;
+          }
         }
         .card {
           background: #ffffff;
           border-radius: 8px;
           box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-          padding: 24px;
-          max-width: 900px;
-          margin: 20px auto;
+          padding: 20px;
+          margin-bottom: 20px;
         }
         .card h2 {
           font-size: 16px;
           font-weight: 600;
-          margin-bottom: 8px;
+          margin-bottom: 16px;
           color: #202223;
           border-bottom: 1px solid #e1e3e5;
-          padding-bottom: 12px;
-          margin-top: 0;
-        }
-        .card-description {
-          font-size: 13px;
-          color: #6d7175;
-          margin-bottom: 24px;
-          line-height: 1.5;
-        }
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin-bottom: 24px;
-        }
-        @media (max-width: 600px) {
-          .form-row {
-            grid-template-columns: 1fr;
-          }
+          padding-bottom: 10px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
         .form-group {
-          display: flex;
-          flex-direction: column;
+          margin-bottom: 15px;
         }
         .form-group label {
+          display: block;
           font-size: 13px;
           font-weight: 600;
-          color: #303030;
           margin-bottom: 6px;
-        }
-        .form-group input {
-          font-family: inherit;
-          padding: 10px 12px;
-          border: 1px solid #babfc3;
-          border-radius: 6px;
-          font-size: 14px;
           color: #303030;
-          background-color: #fff;
-          transition: border-color 0.2s, box-shadow 0.2s;
-          outline: none;
         }
-        .form-group input:focus {
-          border-color: #b48a04;
-          box-shadow: 0 0 0 2px rgba(180, 138, 4, 0.15);
-        }
-        .btn-gold {
-          background-color: #b48a04;
-          color: white;
-          border: 1px solid #b48a04;
-          border-radius: 6px;
-          padding: 10px 20px;
+        .form-control {
+          width: 100%;
+          padding: 8px 12px;
+          border: 1px solid #babfc3;
+          border-radius: 5px;
           font-size: 14px;
-          font-weight: 600;
+          box-sizing: border-box;
+          outline: none;
+          color: #303030;
+          font-family: inherit;
+        }
+        .form-control:focus {
+          border-color: #303030;
+        }
+        .btn {
+          background: #303030;
+          color: white;
+          border: 1px solid #303030;
+          padding: 8px 16px;
+          border-radius: 5px;
+          font-size: 14px;
+          font-weight: 500;
           cursor: pointer;
-          transition: background-color 0.2s, border-color 0.2s;
           display: inline-flex;
           align-items: center;
           justify-content: center;
+          font-family: inherit;
         }
-        .btn-gold:hover {
-          background-color: #967102;
-          border-color: #967102;
+        .btn:hover {
+          background: #1a1a1a;
+          border-color: #1a1a1a;
         }
-        .btn-gold:disabled {
-          background-color: #e1e3e5;
+        .btn:disabled {
+          background: #e1e3e5;
           border-color: #e1e3e5;
           color: #8c9196;
           cursor: not-allowed;
         }
-        .alert-connected {
-          background-color: #faf8f0;
-          border: 1px solid #eedea6;
-          color: #705500;
-          border-radius: 6px;
-          padding: 12px 16px;
+        .badge {
+          display: inline-block;
+          padding: 3px 8px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 600;
+        }
+        .badge-success {
+          background: #e6f4ea;
+          color: #137333;
+        }
+        .text-muted {
+          color: #6d7175;
+          font-size: 12px;
+          line-height: 1.6;
+        }
+        ol {
+          padding-left: 20px;
+          margin: 10px 0;
+        }
+        li {
+          margin-bottom: 8px;
           font-size: 13px;
-          margin-bottom: 20px;
-          font-weight: 500;
+          color: #303030;
         }
       `}</style>
 
-      <div className="header" style={{ maxWidth: "900px", margin: "0 auto 20px auto" }}>
-        <h1>Shopify Sync</h1>
-        <p>Centralized gold rate management for your entire store</p>
+      <div className="header">
+        <h1>Shopify Sync Settings</h1>
       </div>
 
-      <div className="card">
-        <h2>CONNECT YOUR SHOPIFY STORE</h2>
-        <p className="card-description">
-          Enter your Shopify store domain and a private app access token with read/write access to Products.
-        </p>
+      <div className="grid">
+        {/* LEFT PANEL */}
+        <div>
+          <div className="card">
+            <h2>
+              Connect Your Shopify Store
+              {settings.syncShopifyDomain && settings.syncAccessToken && (
+                <span className="badge badge-success">Connected</span>
+              )}
+            </h2>
+            
+            <p className="text-muted" style={{ marginBottom: "20px" }}>
+              Enter your Shopify store domain and a private app access token with read/write access to Products to automate dynamic gold pricing calculations.
+            </p>
 
-        {settings.syncShopifyDomain && settings.syncAccessToken ? (
-          <div className="alert-connected">
-            ✓ Currently connected to store: <strong>{settings.syncShopifyDomain}</strong>
+            <fetcher.Form method="post">
+              <div className="form-group">
+                <label htmlFor="syncShopifyDomain">Store Domain</label>
+                <input
+                  type="text"
+                  id="syncShopifyDomain"
+                  name="syncShopifyDomain"
+                  placeholder="yourstore.myshopify.com"
+                  className="form-control"
+                  defaultValue={settings.syncShopifyDomain}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="syncAccessToken">Access Token</label>
+                <input
+                  type="password"
+                  id="syncAccessToken"
+                  name="syncAccessToken"
+                  placeholder="shpat_xxxxxxxxxxxxxxxx"
+                  className="form-control"
+                  defaultValue={settings.syncAccessToken}
+                  required
+                />
+              </div>
+
+              <div style={{ marginTop: "20px" }}>
+                <button type="submit" className="btn" disabled={isSubmitting}>
+                  {isSubmitting ? "Connecting..." : "Connect & Save Settings"}
+                </button>
+              </div>
+            </fetcher.Form>
           </div>
-        ) : null}
+        </div>
 
-        <fetcher.Form method="post">
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="syncShopifyDomain">Store Domain</label>
-              <input
-                type="text"
-                id="syncShopifyDomain"
-                name="syncShopifyDomain"
-                placeholder="yourstore.myshopify.com"
-                defaultValue={settings.syncShopifyDomain}
-                required
-              />
+        {/* RIGHT PANEL (GUIDE) */}
+        <div>
+          <div className="card">
+            <h2>Integration Help Guide</h2>
+            <div className="text-muted">
+              <p>To obtain your Store Domain and Access Token, follow these steps in your Shopify Admin:</p>
+              <ol>
+                <li>Go to <strong>Settings</strong> &gt; <strong>App and sales channels</strong>.</li>
+                <li>Click <strong>Develop apps</strong> at the top.</li>
+                <li>Click <strong>Create an app</strong> and name it (e.g., "Gold Price Sync").</li>
+                <li>Under <strong>Configuration</strong>, configure Admin API scopes:
+                  <ul>
+                    <li>Select <strong>write_products</strong> and <strong>read_products</strong>.</li>
+                  </ul>
+                </li>
+                <li>Under <strong>API credentials</strong>, click <strong>Install app</strong>.</li>
+                <li>Reveal and copy the <strong>Admin API access token</strong> (starts with <code>shpat_</code>).</li>
+                <li>Paste your copied token and store URL here.</li>
+              </ol>
             </div>
-
-            <div className="form-group">
-              <label htmlFor="syncAccessToken">Access Token</label>
-              <input
-                type="password"
-                id="syncAccessToken"
-                name="syncAccessToken"
-                placeholder="shpat_xxxxxxxxxxxxxxxx"
-                defaultValue={settings.syncAccessToken}
-                required
-              />
-            </div>
           </div>
-
-          <div style={{ textAlign: "left" }}>
-            <button type="submit" className="btn-gold" disabled={isSubmitting}>
-              {isSubmitting ? "Saving & Connecting..." : "Connect & Save Settings"}
-            </button>
-          </div>
-        </fetcher.Form>
+        </div>
       </div>
     </div>
   );
