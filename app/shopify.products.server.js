@@ -196,3 +196,75 @@ export async function syncProductPrices(admin, settings, effectiveRates, targetP
 
   return updatedCount;
 }
+
+const CREATE_METAFIELD_DEF_MUTATION = `#graphql
+  mutation CreateMetafieldDefinition($definition: MetafieldDefinitionInput!) {
+    metafieldDefinitionCreate(definition: $definition) {
+      createdDefinition {
+        id
+        key
+      }
+      userErrors {
+        field
+        message
+        code
+      }
+    }
+  }
+`;
+
+/**
+ * Automatically registers the Product and Variant level gold weight and karat metafield definitions on install/startup.
+ */
+export async function ensureMetafieldDefinitions(admin) {
+  const definitions = [
+    {
+      name: "Gold Weight",
+      namespace: "custom",
+      key: "gold_weight",
+      ownerType: "PRODUCT",
+      type: "number_decimal",
+    },
+    {
+      name: "Gold Karat",
+      namespace: "custom",
+      key: "gold_karat",
+      ownerType: "PRODUCT",
+      type: "single_line_text_field",
+    },
+    {
+      name: "Gold Weight",
+      namespace: "custom",
+      key: "gold_weight",
+      ownerType: "PRODUCTVARIANT",
+      type: "number_decimal",
+    },
+    {
+      name: "Gold Karat",
+      namespace: "custom",
+      key: "gold_karat",
+      ownerType: "PRODUCTVARIANT",
+      type: "single_line_text_field",
+    },
+  ];
+
+  for (const def of definitions) {
+    try {
+      const response = await admin.graphql(CREATE_METAFIELD_DEF_MUTATION, {
+        variables: {
+          definition: def,
+        },
+      });
+      const responseJson = await response.json();
+      const userErrors = responseJson.data?.metafieldDefinitionCreate?.userErrors || [];
+      for (const error of userErrors) {
+        if (error.code !== "TAKEN" && error.code !== "UNiquenessValidationError") {
+          console.warn(`Note: Metafield definition ${def.ownerType}.${def.key} error:`, error.message);
+        }
+      }
+    } catch (err) {
+      console.error(`Error registering metafield definition for ${def.ownerType}.${def.key}:`, err);
+    }
+  }
+}
+

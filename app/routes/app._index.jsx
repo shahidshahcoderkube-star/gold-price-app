@@ -5,11 +5,18 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { fetchGoldRates, getEffectiveRates } from "../gold.server";
-import { fetchGoldProducts, syncProductPrices } from "../shopify.products.server";
+import { fetchGoldProducts, syncProductPrices, ensureMetafieldDefinitions } from "../shopify.products.server";
 
 export const loader = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const shop = session.shop;
+
+  // Automatically ensure that metafield definitions exist for the merchant's store
+  try {
+    await ensureMetafieldDefinitions(admin);
+  } catch (err) {
+    console.error("Error ensuring gold metafield definitions:", err);
+  }
 
   // 1. Get Settings or create default
   let settings = await prisma.goldSettings.findUnique({ where: { shop } });
