@@ -8,9 +8,14 @@ const OUNCE_TO_GRAM = 31.1034768;
  * Returns an object with rate24K, rate22K, and rate18K per gram.
  */
 export async function fetchGoldRates(settings = {}) {
-  // Developer's global API Key for Metals.dev
-  const apiKey = "HGGUMKYGD3OXYMLYKTTM686LYKTTM";
+  // Use custom API key from settings if provided, otherwise check env var or fallback
+  const apiKey = (settings.apiKey && settings.apiKey.trim()) || process.env.METALS_API_KEY || "HGGUMKYGD3OXYMLYKTTM686LYKTTM";
   const currency = settings.currency || "USD";
+
+  if (!apiKey || apiKey === "HGGUMKYGD3OXYMLYKTTM686LYKTTM") {
+    // If it's the disabled developer key or empty, warn the user
+    console.warn("Using default/missing Metals.dev API key which might be disabled.");
+  }
 
   const response = await fetch(
     `https://api.metals.dev/v1/latest?api_key=${apiKey}&currency=${currency}&unit=toz`
@@ -18,6 +23,9 @@ export async function fetchGoldRates(settings = {}) {
 
   if (!response.ok) {
     const errorText = await response.text();
+    if (response.status === 401 || errorText.includes("1202") || errorText.toLowerCase().includes("disabled")) {
+      throw new Error("Metals.dev API unauthorized or key disabled. Please enter a valid Metals.dev API key in the Configuration Panel.");
+    }
     throw new Error(`Metals.dev API failed: ${response.statusText} - ${errorText}`);
   }
 

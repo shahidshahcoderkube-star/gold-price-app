@@ -102,6 +102,7 @@ export const action = async ({ request }) => {
   }
 
   if (intent === "save_settings") {
+    const apiKey = formData.get("apiKey") || "";
     const makingChargeType = formData.get("makingChargeType") || "percentage";
     const makingChargeValue = parseFloat(formData.get("makingChargeValue")) || 0;
     const profitMarginType = formData.get("profitMarginType") || "percentage";
@@ -116,6 +117,7 @@ export const action = async ({ request }) => {
     settings = await prisma.goldSettings.update({
       where: { shop },
       data: {
+        apiKey,
         makingChargeType,
         makingChargeValue,
         profitMarginType,
@@ -728,6 +730,20 @@ export default function Index() {
           <div className="card">
             <h2>Configuration Panel</h2>
             <form onSubmit={handleSaveSettings}>
+              <div className="form-group">
+                <label>Metals.dev API Key</label>
+                <input
+                  type="text"
+                  name="apiKey"
+                  className="form-control"
+                  placeholder="Enter Metals.dev API Key"
+                  defaultValue={settings.apiKey}
+                />
+                <div className="text-muted" style={{ marginTop: "4px" }}>
+                  Get a free API key at <a href="https://metals.dev" target="_blank" rel="noopener noreferrer" style={{ color: "#D4AF37", textDecoration: "underline" }}>metals.dev</a>.
+                </div>
+              </div>
+
               <div className="form-group">
                 <label>Making Charge</label>
                 <div className="input-row">
